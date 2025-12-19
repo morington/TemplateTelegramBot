@@ -88,6 +88,33 @@ services:
         compress: "true"
     restart: unless-stopped
 
+  template_telegrambot:
+    build:
+      context: .
+      dockerfile: dockerfiles/Dockerfile.telegrambot
+    image: template-telegrambot:1.0.0
+    container_name: template_telegrambot
+    depends_on:
+      postgresql_template_telegrambot:
+        condition: service_healthy
+      nats_template_telegrambot:
+        condition: service_healthy
+    volumes:
+      - ./locales:/app/locales
+      - ./src:/app/src
+    env_file:
+      - .env
+    networks:
+      - template_telegrambot
+    command: ["python", "src/telegrambot/main.py"]
+    logging:
+      driver: local
+      options:
+        max-size: "10m"
+        max-file: "2"
+    restart: unless-stopped
+
+
 volumes:
   postgresql_template_telegrambot_data:
   nats_template_telegrambot_data:
