@@ -1,0 +1,97 @@
+services:
+  postgresql_template_telegrambot:
+    build:
+      context: .
+      dockerfile: dockerfiles/Dockerfile.postgresql
+    image: postgresql-template-telegrambot-1.0.0
+    container_name: postgresql_template_telegrambot
+    ports:
+      - "127.0.0.1:5432:5432"
+    environment:
+      - POSTGRES_USER=${POSTGRESQL__USER}
+      - POSTGRES_PASSWORD=${POSTGRESQL__PASSWORD}
+      - POSTGRES_DB=${POSTGRESQL__DB}
+    volumes:
+      - postgresql_template_telegrambot_data:/var/lib/postgresql
+    networks:
+      - template_telegrambot
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRESQL__USER} -d ${POSTGRESQL__DB} -h localhost" ]
+      interval: 5s
+      timeout: 10s
+      retries: 3
+      start_period: 0s
+    logging:
+      driver: local
+      options:
+        max-size: "50m"
+        max-file: "5"
+        compress: "true"
+    restart: unless-stopped
+
+  postgresql_template_telegrambot_migrations:
+    build:
+      context: .
+      dockerfile: dockerfiles/Dockerfile.postgresql.migrations
+    image: postgresql-template-telegrambot-migrations:1.0.0
+    container_name: postgresql_template_telegrambot_migrations
+    depends_on:
+      postgresql_template_telegrambot:
+        condition: service_healthy
+    volumes:
+      - ./alembic.ini:/app/alembic.ini
+      - ./alembic/postgresql/migrations:/app/alembic/postgresql/migrations
+      - ./src/telegrambot/infrastructure/repository/postgresql/models.py:/app/src/telegrambot/infrastructure/repository/postgresql/models.py
+      - ./src/__init__.py:/app/src/__init__.py
+      - ./src/config:/app/src/config
+    env_file:
+      - .env
+    networks:
+      - template_telegrambot
+    command: [ "upgrade", "head" ]
+    logging:
+      driver: local
+      options:
+        max-size: "10m"
+        max-file: "2"
+    restart: "no"
+
+  nats_template_telegrambot:
+    build:
+      context: .
+      dockerfile: dockerfiles/Dockerfile.nats
+    image: nats-template-telegrambot:1.0.0
+    container_name: nats_template_telegrambot
+    ports:
+      - "127.0.0.1:4222:4222"
+      - "127.0.0.1:8222:8222"
+    environment:
+      - NATS_USER=${NATS__USER}
+      - NATS_PASSWORD=${NATS__PASSWORD}
+    command: [ "-c", "/config/server.conf" ]
+    volumes:
+      - nats_template_telegrambot_data:/data
+      - ./src/config/nats/config:/config
+    networks:
+      - template_telegrambot
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8222/healthz" ]
+      interval: 5s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    logging:
+      driver: local
+      options:
+        max-size: "50m"
+        max-file: "5"
+        compress: "true"
+    restart: unless-stopped
+
+volumes:
+  postgresql_template_telegrambot_data:
+  nats_template_telegrambot_data:
+
+networks:
+  template_telegrambot:
+    driver: bridge

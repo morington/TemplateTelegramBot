@@ -36,7 +36,7 @@ target-version = "py313"
 line-length = 120
 indent-width = 4
 include = ["src/*"]
-exclude = []
+exclude = ["alembic/postgresql/migrations/*"]
 
 [tool.ruff.lint]
 select = ["ALL"]

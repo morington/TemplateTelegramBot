@@ -28,8 +28,8 @@ class TelegramBot:
 
         i18n: TranslatorRunner = create_translator_runner(locale_dir=Path("locales"))
 
-        web_app = web.Application()
-        web_app.router.add_get("/health", self.handle_health_check)
+        self.web_app = web.Application()
+        self.web_app.router.add_get("/health", self.handle_health_check)
 
         self.dispatcher = Dispatcher(i18n=i18n)
         self.dispatcher.workflow_data.update({"i18n": i18n})
@@ -65,7 +65,7 @@ class TelegramBot:
             webhook_url = f"{self.configuration.webhook.host}{self.configuration.webhook.path}"
             webhook_info: WebhookInfo = await self.bot.get_webhook_info()
             await logger.adebug(
-                "Current webhook info", url=webhook_info.url, has_custom_certificate=webhook_info.has_custom_certificate
+                "Webhook info", url=webhook_info.url, has_custom_certificate=webhook_info.has_custom_certificate
             )
 
             if webhook_info.url != webhook_url:
@@ -78,15 +78,15 @@ class TelegramBot:
             else:
                 await logger.ainfo("Webhook already configured", url=webhook_url)
 
-            runner = web.AppRunner(self.app)
+            runner = web.AppRunner(self.web_app)
             await runner.setup()
 
-            host: str = self.configuration.WEBAPP_HOST
-            port: int = self.configuration.WEBAPP_PORT
-            site = web.TCPSite(runner, host=host, port=port)
-
+            host: str = self.configuration.webapp.host
+            port: int = self.configuration.webapp.port
+            web_server = web.TCPSite(runner, host=host, port=port)
             logger.info("Starting webhook server", host=host, port=port)
-            await site.start()
+
+            await web_server.start()
 
             try:
                 await asyncio.Event().wait()
