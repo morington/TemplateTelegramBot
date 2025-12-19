@@ -1,0 +1,36 @@
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.14.10
+    hooks:
+      # Run the formatter.
+      - id: ruff-format
+        types_or: [ python, pyi ]
+      # Run the linter.
+      - id: ruff-check
+        types_or: [ python, pyi ]
+        args: [ "--no-fix" ]
+
+  - repo: local
+    hooks:
+      # Run units tests
+      - id: units
+        name: Run units tests
+        entry: uv run pytest tests/units
+        language: system
+        types: [ python ]
+        pass_filenames: false
+        always_run: true
+      # Run integrations tests
+      - id: integrations
+        name: Run integrations tests
+        entry: uv run pytest tests/integrations
+        language: system
+        types: [ python ]
+        pass_filenames: false
+        always_run: true
+
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.5.0
+    hooks:
+      - id: detect-secrets
+        exclude: ^alembic/postgresql/migrations/versions/
